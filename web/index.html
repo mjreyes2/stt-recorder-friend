@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monica AI - Voice Recorder</title>
+    <style>
+        :root {
+            --primary: #6c5ce7;
+            --primary-dark: #5a4bd1;
+            --success: #00b894;
+            --danger: #e17055;
+            --warning: #fdcb6e;
+            --bg: #0f0f1a;
+            --surface: #1a1a2e;
+            --surface2: #16213e;
+            --text: #eee;
+            --text-muted: #888;
+            --border: #2a2a4a;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        header {
+            background: linear-gradient(135deg, var(--surface), var(--surface2));
+            padding: 1.5rem 2rem;
+            border-bottom: 1px solid var(--border);
+            text-align: center;
+        }
+        header h1 { font-size: 1.6rem; font-weight: 600; }
+        header h1 span { color: var(--primary); }
+        header p { color: var(--text-muted); margin-top: 0.3rem; font-size: 0.9rem; }
+        .container {
+            max-width: 700px;
+            margin: 0 auto;
+            padding: 1.5rem;
+            flex: 1;
+            width: 100%;
+        }
+
+        /* Setup Screen */
+        #setup-screen { display: flex; flex-direction: column; gap: 1.2rem; }
+        .setup-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+        }
+        .setup-card h2 { font-size: 1.1rem; margin-bottom: 0.8rem; }
+        .setup-card label { display: block; color: var(--text-muted); font-size: 0.85rem; margin-bottom: 0.4rem; }
+        .setup-card input {
+            width: 100%;
+            padding: 0.7rem 1rem;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: var(--bg);
+            color: var(--text);
+            font-size: 1rem;
+        }
+        .setup-card input:focus { outline: none; border-color: var(--primary); }
+        .info-box {
+            background: rgba(108, 92, 231, 0.1);
+            border: 1px solid rgba(108, 92, 231, 0.3);
+            border-radius: 8px;
+            padding: 1rem;
+            font-size: 0.85rem;
+            line-height: 1.5;
+        }
+
+        /* Buttons */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 0.8rem 1.5rem;
+            border: none;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: white;
+        }
+        .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+        .btn-primary { background: var(--primary); }
+        .btn-primary:hover:not(:disabled) { background: var(--primary-dark); transform: translateY(-1px); }
+        .btn-success { background: var(--success); }
+        .btn-success:hover:not(:disabled) { background: #00a381; }
+        .btn-danger { background: var(--danger); }
+        .btn-danger:hover:not(:disabled) { background: #d35b3f; }
+        .btn-outline {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text);
+        }
+        .btn-outline:hover:not(:disabled) { background: var(--surface); }
+        .btn-block { width: 100%; }
+        .btn-lg { padding: 1rem 2rem; font-size: 1.1rem; }
+
+        /* Recording Screen */
+        #record-screen { display: none; flex-direction: column; gap: 1.2rem; }
+        .progress-bar-container {
+            background: var(--surface);
+            border-radius: 20px;
+            padding: 1rem 1.5rem;
+            border: 1px solid var(--border);
+        }
+        .progress-text {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 0.5rem;
+        }
+        .progress-bar {
+            height: 8px;
+            background: var(--bg);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary), var(--success));
+            border-radius: 4px;
+            transition: width 0.3s ease;
+        }
+        .phrase-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 2rem;
+            text-align: center;
+            min-height: 160px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        .phrase-label { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.8rem; text-transform: uppercase; letter-spacing: 1px; }
+        .phrase-text { font-size: 1.3rem; line-height: 1.6; font-weight: 400; }
+        .record-controls {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+        }
+        .record-btn {
+            width: 90px;
+            height: 90px;
+            border-radius: 50%;
+            border: 4px solid var(--danger);
+            background: transparent;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            position: relative;
+        }
+        .record-btn:hover { background: rgba(225, 112, 85, 0.1); }
+        .record-btn .inner {
+            width: 40px;
+            height: 40px;
+            background: var(--danger);
+            border-radius: 50%;
+            transition: all 0.2s;
+        }
+        .record-btn.recording .inner {
+            border-radius: 6px;
+            width: 30px;
+            height: 30px;
+        }
+        .record-btn.recording { border-color: var(--danger); animation: pulse 1.5s infinite; }
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(225, 112, 85, 0.4); }
+            50% { box-shadow: 0 0 0 15px rgba(225, 112, 85, 0); }
+        }
+        .record-status { font-size: 0.9rem; color: var(--text-muted); }
+        .action-buttons {
+            display: flex;
+            gap: 0.8rem;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .action-buttons .btn { flex: 1; min-width: 120px; }
+
+        /* Upload indicator */
+        .upload-status {
+            text-align: center;
+            padding: 0.5rem;
+            font-size: 0.85rem;
+            border-radius: 8px;
+            display: none;
+        }
+        .upload-status.uploading { display: block; background: rgba(253, 203, 110, 0.15); color: var(--warning); }
+        .upload-status.success { display: block; background: rgba(0, 184, 148, 0.15); color: var(--success); }
+        .upload-status.error { display: block; background: rgba(225, 112, 85, 0.15); color: var(--danger); }
+
+        /* Visualizer */
+        #visualizer {
+            width: 100%;
+            height: 60px;
+            border-radius: 8px;
+            background: var(--bg);
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: var(--surface);
+            border: 1px solid var(--border);
+            padding: 0.8rem 1.5rem;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            transition: transform 0.3s ease;
+            z-index: 100;
+        }
+        .toast.show { transform: translateX(-50%) translateY(0); }
+
+        /* Config notice */
+        .config-warning {
+            background: rgba(225, 112, 85, 0.15);
+            border: 1px solid rgba(225, 112, 85, 0.3);
+            border-radius: 8px;
+            padding: 1rem;
+            font-size: 0.85rem;
+            color: var(--danger);
+            display: none;
+        }
+        .config-warning.show { display: block; }
+
+        footer {
+            text-align: center;
+            padding: 1rem;
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            border-top: 1px solid var(--border);
+        }
+
+        @media (max-width: 600px) {
+            .container { padding: 1rem; }
+            .phrase-text { font-size: 1.1rem; }
+            .record-btn { width: 75px; height: 75px; }
+            .record-btn .inner { width: 32px; height: 32px; }
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1><span>Monica AI</span> — Voice Training Recorder</h1>
+    <p>Help train Monica's voice recognition by reading phrases aloud</p>
+</header>
+
+<div class="container">
+    <!-- Setup Screen -->
+    <div id="setup-screen">
+        <div class="setup-card">
+            <h2>Welcome!</h2>
+            <div class="info-box">
+                You'll see phrases on screen — read each one aloud and the recording gets saved automatically.
+                No software to install! Everything works right here in your browser.
+                <br><br>
+                <strong>Tips:</strong> Use a quiet room, speak clearly at normal pace, and use Chrome or Edge for best results.
+            </div>
+        </div>
+        <div class="setup-card">
+            <h2>Your Name</h2>
+            <label for="recorder-name">So we know whose recordings these are</label>
+            <input type="text" id="recorder-name" placeholder="e.g., John" autocomplete="name">
+        </div>
+        <div class="config-warning" id="config-warning">
+            ⚠️ The recording server is not configured yet. Recordings will be saved locally in your browser
+            and you can download them as a zip file when done.
+        </div>
+        <button class="btn btn-primary btn-block btn-lg" id="start-btn" onclick="startRecording()">
+            🎙️ Start Recording Session
+        </button>
+    </div>
+
+    <!-- Recording Screen -->
+    <div id="record-screen">
+        <div class="progress-bar-container">
+            <div class="progress-text">
+                <span id="progress-label">Phrase 1 of 100</span>
+                <span id="progress-pct">0%</span>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progress-fill" style="width: 0%"></div>
+            </div>
+        </div>
+
+        <div class="phrase-card">
+            <div class="phrase-label">Read this phrase aloud:</div>
+            <div class="phrase-text" id="phrase-text">Loading...</div>
+        </div>
+
+        <canvas id="visualizer"></canvas>
+
+        <div class="record-controls">
+            <button class="record-btn" id="record-btn" onclick="toggleRecord()">
+                <div class="inner"></div>
+            </button>
+            <div class="record-status" id="record-status">Tap to start recording</div>
+        </div>
+
+        <div class="upload-status" id="upload-status"></div>
+
+        <div class="action-buttons" id="post-record-actions" style="display:none;">
+            <button class="btn btn-outline" onclick="playback()">▶️ Play Back</button>
+            <button class="btn btn-danger" onclick="redoPhrase()">🔄 Redo</button>
+            <button class="btn btn-outline" onclick="skipPhrase()">⏭ Skip</button>
+            <button class="btn btn-success" onclick="acceptAndNext()">✅ Accept & Next</button>
+        </div>
+
+        <div class="action-buttons" style="margin-top: 0.5rem;">
+            <button class="btn btn-outline" onclick="downloadAll()">💾 Download All</button>
+            <button class="btn btn-outline" onclick="endSession()">🏁 End Session</button>
+        </div>
+    </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<footer>
+    Monica AI Voice Training — Your recordings help improve speech recognition accuracy.
+</footer>
+
+<script>
+// ============================================
+// CONFIGURATION
+// ============================================
+// Paste your Google Apps Script Web App URL here:
+const APPS_SCRIPT_URL = "";
+
+// How many phrases to show per session (0 = all)
+const PHRASES_PER_SESSION = 100;
+// ============================================
+
+let phrases = [];
+let currentIndex = 0;
+let sessionPhrases = [];
+let recorderName = "";
+let mediaRecorder = null;
+let audioChunks = [];
+let audioBlob = null;
+let audioUrl = null;
+let isRecording = false;
+let recordings = []; // {phrase, index, blob, uploaded}
+let audioContext = null;
+let analyser = null;
+let animFrameId = null;
+let completedCount = 0;
+let stream = null;
+
+// Load phrases from embedded data or remote
+async function loadPhrases() {
+    try {
+        const resp = await fetch("phrases.json");
+        if (resp.ok) {
+            phrases = await resp.json();
+        }
+    } catch (e) {
+        console.log("phrases.json not available, using embedded sample");
+    }
+    if (!phrases.length) {
+        phrases = ["This is a test phrase", "Please set up phrases.json"];
+    }
+}
+
+function shuffleArray(arr) {
+    const a = [...arr];
+    for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+}
+
+async function startRecording() {
+    recorderName = document.getElementById("recorder-name").value.trim();
+    if (!recorderName) {
+        showToast("Please enter your name first");
+        document.getElementById("recorder-name").focus();
+        return;
+    }
+
+    // Request mic access
+    try {
+        stream = await navigator.mediaDevices.getUserMedia({
+            audio: { echoCancellation: true, noiseSuppression: true, sampleRate: 16000 }
+        });
+    } catch (e) {
+        showToast("Microphone access denied. Please allow mic access and try again.");
+        return;
+    }
+
+    // Setup audio visualizer
+    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    analyser = audioContext.createAnalyser();
+    const source = audioContext.createMediaStreamSource(stream);
+    source.connect(analyser);
+    analyser.fftSize = 256;
+    drawVisualizer();
+
+    // Load and shuffle phrases, pick a session batch
+    await loadPhrases();
+    const shuffled = shuffleArray(phrases);
+    const count = PHRASES_PER_SESSION > 0 ? Math.min(PHRASES_PER_SESSION, shuffled.length) : shuffled.length;
+    sessionPhrases = shuffled.slice(0, count);
+    currentIndex = 0;
+    completedCount = 0;
+
+    // Load saved progress if available
+    const savedProgress = localStorage.getItem(`stt_progress_${recorderName}`);
+    if (savedProgress) {
+        const saved = JSON.parse(savedProgress);
+        completedCount = saved.completed || 0;
+    }
+
+    // Switch screens
+    document.getElementById("setup-screen").style.display = "none";
+    document.getElementById("record-screen").style.display = "flex";
+    showPhrase();
+}
+
+function showPhrase() {
+    if (currentIndex >= sessionPhrases.length) {
+        endSession();
+        return;
+    }
+    const phrase = sessionPhrases[currentIndex];
+    document.getElementById("phrase-text").textContent = phrase;
+    document.getElementById("progress-label").textContent =
+        `Phrase ${currentIndex + 1} of ${sessionPhrases.length}`;
+    const pct = Math.round(((currentIndex) / sessionPhrases.length) * 100);
+    document.getElementById("progress-pct").textContent = pct + "%";
+    document.getElementById("progress-fill").style.width = pct + "%";
+    document.getElementById("post-record-actions").style.display = "none";
+    document.getElementById("record-status").textContent = "Tap to start recording";
+    document.getElementById("record-btn").classList.remove("recording");
+    hideUploadStatus();
+    audioBlob = null;
+    audioUrl = null;
+}
+
+function toggleRecord() {
+    if (isRecording) {
+        stopRec();
+    } else {
+        startRec();
+    }
+}
+
+function startRec() {
+    audioChunks = [];
+    mediaRecorder = new MediaRecorder(stream, { mimeType: getSupportedMimeType() });
+    mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) audioChunks.push(e.data);
+    };
+    mediaRecorder.onstop = () => {
+        audioBlob = new Blob(audioChunks, { type: "audio/webm" });
+        audioUrl = URL.createObjectURL(audioBlob);
+        document.getElementById("post-record-actions").style.display = "flex";
+        document.getElementById("record-status").textContent = "Recording complete — review below";
+    };
+    mediaRecorder.start();
+    isRecording = true;
+    document.getElementById("record-btn").classList.add("recording");
+    document.getElementById("record-status").textContent = "🔴 Recording... tap to stop";
+    document.getElementById("post-record-actions").style.display = "none";
+}
+
+function stopRec() {
+    if (mediaRecorder && mediaRecorder.state === "recording") {
+        mediaRecorder.stop();
+    }
+    isRecording = false;
+    document.getElementById("record-btn").classList.remove("recording");
+}
+
+function getSupportedMimeType() {
+    const types = ["audio/webm;codecs=opus", "audio/webm", "audio/ogg;codecs=opus", "audio/mp4"];
+    for (const t of types) {
+        if (MediaRecorder.isTypeSupported(t)) return t;
+    }
+    return "";
+}
+
+function playback() {
+    if (!audioUrl) return;
+    const audio = new Audio(audioUrl);
+    audio.play();
+}
+
+function redoPhrase() {
+    audioBlob = null;
+    audioUrl = null;
+    document.getElementById("post-record-actions").style.display = "none";
+    document.getElementById("record-status").textContent = "Tap to start recording";
+    hideUploadStatus();
+}
+
+function skipPhrase() {
+    currentIndex++;
+    showPhrase();
+}
+
+async function acceptAndNext() {
+    if (!audioBlob) return;
+    const phrase = sessionPhrases[currentIndex];
+    const phraseIdx = phrases.indexOf(phrase);
+    const filename = `${recorderName}_phrase_${String(phraseIdx).padStart(5, "0")}.wav`;
+
+    // Store locally
+    recordings.push({ phrase, index: phraseIdx, blob: audioBlob, filename, uploaded: false });
+    completedCount++;
+
+    // Save progress
+    localStorage.setItem(`stt_progress_${recorderName}`, JSON.stringify({
+        completed: completedCount,
+        lastSession: new Date().toISOString()
+    }));
+
+    // Try uploading to Google Apps Script
+    if (APPS_SCRIPT_URL) {
+        showUploadStatus("uploading", "⏳ Uploading...");
+        try {
+            await uploadToAppsScript(audioBlob, filename, phrase, phraseIdx);
+            recordings[recordings.length - 1].uploaded = true;
+            showUploadStatus("success", "✅ Saved to Google Drive");
+        } catch (e) {
+            showUploadStatus("error", "⚠️ Upload failed — saved locally");
+            console.error("Upload error:", e);
+        }
+    }
+
+    // Move to next
+    currentIndex++;
+    setTimeout(() => showPhrase(), APPS_SCRIPT_URL ? 800 : 200);
+}
+
+async function uploadToAppsScript(blob, filename, phrase, phraseIndex) {
+    const reader = new FileReader();
+    const base64 = await new Promise((resolve, reject) => {
+        reader.onload = () => {
+            const dataUrl = reader.result;
+            // Remove data URL prefix to get raw base64
+            resolve(dataUrl.split(",")[1]);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+    });
+
+    const resp = await fetch(APPS_SCRIPT_URL, {
+        method: "POST",
+        mode: "no-cors",
+        headers: { "Content-Type": "text/plain" },
+        body: JSON.stringify({
+            audio: base64,
+            filename: filename,
+            phrase: phrase,
+            phraseIndex: phraseIndex,
+            recorderName: recorderName
+        })
+    });
+
+    // no-cors means we can't read the response, but if it didn't throw, it likely worked
+    return true;
+}
+
+function showUploadStatus(type, text) {
+    const el = document.getElementById("upload-status");
+    el.className = "upload-status " + type;
+    el.textContent = text;
+}
+function hideUploadStatus() {
+    document.getElementById("upload-status").className = "upload-status";
+}
+
+// Download all recordings as individual files
+async function downloadAll() {
+    if (!recordings.length) {
+        showToast("No recordings to download yet");
+        return;
+    }
+    showToast(`Preparing ${recordings.length} recordings for download...`);
+
+    // Use simple approach: download each file
+    for (const rec of recordings) {
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(rec.blob);
+        a.download = rec.filename;
+        a.click();
+        await new Promise(r => setTimeout(r, 300)); // brief delay between downloads
+    }
+    showToast(`Downloaded ${recordings.length} recordings`);
+}
+
+function endSession() {
+    if (isRecording) stopRec();
+    if (stream) stream.getTracks().forEach(t => t.stop());
+    if (animFrameId) cancelAnimationFrame(animFrameId);
+
+    const uploaded = recordings.filter(r => r.uploaded).length;
+    const local = recordings.length - uploaded;
+    let msg = `Session complete! ${recordings.length} phrases recorded.`;
+    if (uploaded > 0) msg += ` ${uploaded} uploaded to Google Drive.`;
+    if (local > 0) msg += ` ${local} saved locally — click "Download All" to save.`;
+
+    document.getElementById("record-screen").innerHTML = `
+        <div class="phrase-card" style="text-align:center;">
+            <div style="font-size:3rem; margin-bottom:1rem;">🎉</div>
+            <h2>Great Job!</h2>
+            <p style="margin-top:0.8rem; color: var(--text-muted);">${msg}</p>
+            <p style="margin-top:0.5rem; color: var(--text-muted);">Total phrases recorded across all sessions: <strong>${completedCount}</strong></p>
+        </div>
+        ${local > 0 ? `<button class="btn btn-primary btn-block" onclick="downloadAll()">💾 Download ${local} Recordings</button>` : ""}
+        <button class="btn btn-outline btn-block" onclick="location.reload()">🔄 Start New Session</button>
+    `;
+    document.getElementById("record-screen").style.display = "flex";
+}
+
+// Audio Visualizer
+function drawVisualizer() {
+    const canvas = document.getElementById("visualizer");
+    const ctx = canvas.getContext("2d");
+    canvas.width = canvas.offsetWidth * 2;
+    canvas.height = canvas.offsetHeight * 2;
+    ctx.scale(2, 2);
+    const W = canvas.offsetWidth;
+    const H = canvas.offsetHeight;
+
+    function draw() {
+        animFrameId = requestAnimationFrame(draw);
+        const bufLen = analyser.frequencyBinCount;
+        const data = new Uint8Array(bufLen);
+        analyser.getByteTimeDomainData(data);
+
+        ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue("--bg").trim();
+        ctx.fillRect(0, 0, W, H);
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = isRecording ? "#e17055" : "#6c5ce7";
+        ctx.beginPath();
+        const sliceW = W / bufLen;
+        let x = 0;
+        for (let i = 0; i < bufLen; i++) {
+            const v = data[i] / 128.0;
+            const y = (v * H) / 2;
+            if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+            x += sliceW;
+        }
+        ctx.lineTo(W, H / 2);
+        ctx.stroke();
+    }
+    draw();
+}
+
+function showToast(msg) {
+    const el = document.getElementById("toast");
+    el.textContent = msg;
+    el.classList.add("show");
+    setTimeout(() => el.classList.remove("show"), 3000);
+}
+
+// On load — check config
+window.addEventListener("DOMContentLoaded", () => {
+    if (!APPS_SCRIPT_URL) {
+        document.getElementById("config-warning").classList.add("show");
+    }
+    // Restore name
+    const savedName = localStorage.getItem("stt_recorder_name");
+    if (savedName) document.getElementById("recorder-name").value = savedName;
+    document.getElementById("recorder-name").addEventListener("change", (e) => {
+        localStorage.setItem("stt_recorder_name", e.target.value);
+    });
+});
+</script>
+</body>
+</html>
