@@ -519,7 +519,9 @@ async function acceptAndNext() {
     if (!audioBlob) return;
     const phrase = sessionPhrases[currentIndex];
     const phraseIdx = phrases.indexOf(phrase);
-    const filename = `${recorderName}_phrase_${String(phraseIdx).padStart(5, "0")}.wav`;
+    // Filename: Name_PhraseText.wav (sanitized: lowercase, spaces to underscores, max 80 chars)
+    const safePhrase = phrase.toLowerCase().replace(/[^a-z0-9 ]/g, "").trim().replace(/\s+/g, "_").slice(0, 80);
+    const filename = `${recorderName}_${safePhrase}.wav`;
 
     // Store locally
     recordings.push({ phrase, index: phraseIdx, blob: audioBlob, filename, uploaded: false });
