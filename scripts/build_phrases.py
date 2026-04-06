@@ -485,28 +485,32 @@ def generate_diverse(count=3000):
             break
         phrases.add(p)
 
-    # Fill remainder with numbered variations (guaranteed unique)
-    idx = 0
-    fillers = ["Um, ", "Well, ", "So, ", "Actually, ", "Honestly, "]
+    # Fill remainder: cycle through all filler×base combos (finite, no infinite loop risk)
+    all_fillers = ["Um, ", "Well, ", "So, ", "Actually, ", "Honestly, ",
+                   "Look, ", "Right, ", "Okay, ", "Now, ", "Yes, ",
+                   "True, ", "Hey, ", "Wait, ", "No, ", "Still, "]
     bases = general_long + everyday + motivational + nature + technology + medical
-    while len(phrases) < count:
-        base = bases[idx % len(bases)]
-        p = f"{fillers[idx % len(fillers)]}{base[0].lower()}{base[1:].rstrip('.!?')} — {idx}."
-        phrases.add(p)
-        idx += 1
+    for filler in all_fillers:
+        for base in bases:
+            if len(phrases) >= count:
+                break
+            p = f"{filler}{base[0].lower()}{base[1:].rstrip('.!?')}."
+            phrases.add(p)
+        if len(phrases) >= count:
+            break
 
     return list(phrases)[:count]
 
 
 # ── Phrase cleaner ─────────────────────────────────────────────────────────────
 
-# Words that are NOT valid standalone English words and signal a broken/split word
-# when they appear as the first part of a suspected word split
-_NOT_STANDALONE = {
-    'acqu','indepe','depen','rec','un','pre','con','dis','re','mis','over',
-    'under','inter','trans','sub','super','anti','semi','neo','non','pro',
-    'tele','micro','macro','bio','geo','auto','multi','poly','mono','hypo',
-    'hyper','pseudo','quasi','peri','para','meta','infra','ultra','extra',
+# Fragments that are NEVER valid standalone English words — signal a broken/split word
+# e.g. "indepe ndence", "acqui escence", "gratifica tion"
+_BROKEN_FRAGMENTS = {
+    'indepe', 'independ', 'acqui', 'acquies', 'acquiesc', 'gratifica',
+    'pleasura', 'unmistaka', 'imagina', 'recogni', 'recogniz', 'recognis',
+    'organi', 'organiz', 'individu', 'differe', 'exper', 'experi', 'impor',
+    'imposs', 'impossib', 'represen', 'demonstr',
 }
 
 # Psychoanalytic / Freudian academic source text — not suitable for STT
@@ -604,12 +608,11 @@ def is_clean(phrase):
     if any(block in pl for block in _ACADEMIC_BLOCKLIST):
         return False
 
-    # Detect OCR mid-word split: fragment (3-7 chars, known non-word prefix) followed by continuation
-    for m in re.finditer(r'\b([a-z]{3,7}) ([a-z]{3,8})\b', pl):
+    # Detect OCR mid-word split using known non-word fragments
+    # e.g. "indepe ndence" — "indepe" is never a standalone word
+    for m in re.finditer(r'\b([a-z]{4,9}) ([a-z]{3,8})\b', pl):
         frag = m.group(1)
-        cont = m.group(2)
-        combined = frag + cont
-        if frag in _NOT_STANDALONE and len(combined) >= 8:
+        if frag in _BROKEN_FRAGMENTS:
             return False
 
     # Detect mid-word hyphenation breaks: 'indepe ndence', 'differe ntiate', 'sym ptom'
@@ -617,13 +620,8 @@ def is_clean(phrase):
     if re.search(r'\b[a-z]{3,8} (?:nd|nt|nc|ng|ld|lk|lm|lp|lt|rb|rd|rk|rm|rn|rp|rt|ck|ct|ft|pt)[a-z]+\b', pl):
         return False
 
-    # Textbook-style title/heading that isn't a proper sentence
-    # e.g. "A Is for Accomplished: Writing at School..."
+    # Textbook-style title/heading
     if re.match(r'^[A-Z][a-z]+ (Is|For|And) [A-Z][a-z]', p):
-        return False
-
-    # Truncated phrases that end abruptly (common OCR artifact)
-    if re.search(r'\s[a-z]{1,3}$', p.rstrip('.?!')):
         return False
 
     return True
