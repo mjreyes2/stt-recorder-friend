@@ -599,13 +599,29 @@ def is_clean(phrase):
     if re.search(r'\b\d{4,}\b', p):
         return False
 
+    # No numbered synthetic duplicates: "phrase — 248." style
+    if re.search(r' — \d+\.$', p):
+        return False
+
     # No math operators
     if re.search(r'\d+x\s*[\+\-]', p):
+        return False
+
+    # No URLs
+    if re.search(r'https?:|www\.', p.lower()):
         return False
 
     # Blocked academic/clinical content
     pl = p.lower()
     if any(block in pl for block in _ACADEMIC_BLOCKLIST):
+        return False
+
+    # Detect stuck words: camelCase in the middle of a phrase
+    # e.g. "ofJuly", "SubjectVerb", "DiscussionGoals"
+    if re.search(r'[a-z][A-Z]', p):
+        return False
+    # Detect "I" stuck to a verb at start (no space): "Igrew", "Iwas", "Iam", "Iwent"
+    if re.match(r'^I(grew|was|were|went|am|are|have|had|can|will|would|did|do|need|want|see|saw|know|feel|felt|think|believe|said|told|asked|tried|used|got|get|gave|give|took|take|made|make|came|come|ran|run|sat|sit|stood|stand|walked|talked|called)', p):
         return False
 
     # Detect OCR mid-word split using known non-word fragments
