@@ -750,19 +750,67 @@ function getSupportedMimeType() {
 // ── Word pronunciation (Web Speech API) ────────────────────────────────────
 let _speakingSpan = null;
 
+/**
+ * Detect the likely language of a word based on characteristic characters
+ * and letter patterns. Returns a BCP-47 lang tag for SpeechSynthesisUtterance.
+ */
+function detectWordLang(word) {
+    const w = word.toLowerCase();
+
+    // Cyrillic → Russian
+    if (/[\u0400-\u04FF]/.test(word)) return "ru-RU";
+
+    // Arabic
+    if (/[\u0600-\u06FF]/.test(word)) return "ar-SA";
+
+    // Chinese / Japanese / Korean
+    if (/[\u4E00-\u9FFF\u3040-\u30FF\uAC00-\uD7AF]/.test(word)) return "zh-CN";
+
+    // German: ß, or ü/ö/ä in combo with common German patterns
+    if (/ß/.test(word)) return "de-DE";
+    if (/[äöü]/.test(word) && /(?:sch|tsch|cht|ung|keit|heit|lich|weise|reich|burg|berg|dorf|wald)\b/.test(w)) return "de-DE";
+
+    // French: œ, ç, or accents common in French + French patterns
+    if (/[œŒ]/.test(word)) return "fr-FR";
+    if (/ç/.test(word) && !/[ñ]/.test(word)) return "fr-FR";
+    if (/[àâéèêëîïôùûü]/.test(word) && /(?:eau|eux|aise|ois|ois|ment|ique|elle|ille|tion|sion)\b/.test(w)) return "fr-FR";
+
+    // Spanish: ñ, ¿, ¡, or á/é/í/ó/ú with Spanish markers
+    if (/[ñ¿¡]/.test(word)) return "es-ES";
+    if (/[áéíóú]/.test(word) && /(?:ción|dad|idad|ismo|ista|mente|ando|iendo|aron|aron|aban)\b/.test(w)) return "es-ES";
+
+    // Italian: common Italian endings
+    if (/(?:zione|aggio|ezza|iero|iere|etta|etto|ista|elli|ello|ello|ando|endo)\b/.test(w) &&
+        /[àèéìíîòóùú]/.test(word)) return "it-IT";
+
+    // Portuguese
+    if (/[ãõ]/.test(word)) return "pt-PT";
+
+    // Default: English
+    return "en-US";
+}
+
 function speakWord(word, spanEl) {
     if (!window.speechSynthesis) return;
     // Cancel any in-progress utterance
     window.speechSynthesis.cancel();
     if (_speakingSpan) { _speakingSpan.classList.remove("speaking"); _speakingSpan = null; }
 
-    const clean = word.replace(/[^a-zA-Z''\-]/g, "").trim();
+    // Keep letters, apostrophes, hyphens, AND accented/unicode characters
+    const clean = word.replace(/[^\p{L}'\-]/gu, "").trim();
     if (!clean) return;
+
+    const lang = detectWordLang(clean);
 
     const utter = new SpeechSynthesisUtterance(clean);
     utter.rate  = 0.85;   // slightly slower for clarity
     utter.pitch = 1.0;
-    utter.lang  = "en-US";
+    utter.lang  = lang;
+
+    // Try to pick a voice that actually matches the detected language
+    const voices = window.speechSynthesis.getVoices();
+    const match  = voices.find(v => v.lang.startsWith(lang.split("-")[0]));
+    if (match) utter.voice = match;
 
     spanEl.classList.add("speaking");
     _speakingSpan = spanEl;
@@ -1106,6 +1154,11 @@ window.addEventListener("DOMContentLoaded", () => {
     });
     // Load mic options
     loadMicOptions();
+    // Pre-load speech synthesis voices (browsers load them async)
+    if (window.speechSynthesis) {
+        window.speechSynthesis.getVoices();
+        window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
+    }
 });
 </script>
 </body>
