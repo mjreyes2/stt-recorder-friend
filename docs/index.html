@@ -500,10 +500,15 @@ function getSupportedMimeType() {
 }
 
 function playback() {
-    if (!audioUrl) return;
+    if (!audioUrl) {
+        console.warn("No audioUrl available for playback");
+        return;
+    }
     const audioEl = document.getElementById("playback-audio");
     audioEl.src = audioUrl;
     audioEl.style.display = "block";
+    audioEl.onerror = (e) => console.error("Audio element error:", e, audioEl.error);
+    audioEl.load();
     audioEl.play().catch(err => console.error("Playback error:", err));
 }
 
