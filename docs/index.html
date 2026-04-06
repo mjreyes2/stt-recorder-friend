@@ -790,34 +790,143 @@ function detectWordLang(word) {
     return "en-US";
 }
 
+/**
+ * Split an English word into syllables.
+ *
+ * Rules applied (in order):
+ *  1. Single consonant between vowels → goes with the NEXT vowel  (ba-by)
+ *  2. Two+ consonants → keep onset blends (bl, str, etc.) with next vowel,
+ *     leave remainder with previous vowel  (sis-ter, in-ble → na-ble)
+ *  3. Consecutive vowels treated as one nucleus (no split inside diphthongs)
+ *
+ * Works on the ASCII-lowercased form but returns slices of the original.
+ */
+function syllabify(word) {
+    const ascii = word.toLowerCase().replace(/[^a-z]/g, "");
+    if (ascii.length <= 3) return [word];
+
+    const VOWELS = new Set("aeiouy");
+
+    // Consonant blends that should stay together at the START of a syllable
+    const BLENDS = new Set([
+        "bl","br","cl","cr","dr","fl","fr","gl","gr","kl","kn",
+        "pl","pr","sc","sk","sl","sm","sn","sp","st","sw","tr","tw","wr",
+        "sch","scr","shr","spl","spr","squ","str","thr",
+        "ph","ch","sh","th","wh","ck","ng","nk","gh","qu"
+    ]);
+
+    // Locate vowel nuclei (runs of consecutive vowels)
+    const nuclei = [];
+    let i = 0;
+    while (i < ascii.length) {
+        if (VOWELS.has(ascii[i])) {
+            const s = i;
+            while (i < ascii.length && VOWELS.has(ascii[i])) i++;
+            nuclei.push({ start: s, end: i - 1 });
+        } else { i++; }
+    }
+
+    if (nuclei.length <= 1) return [word];
+
+    // Build cut-point list (indices into `word`, not `ascii`)
+    // Since we only stripped non-alpha for the ascii copy, word and ascii have
+    // the same length for pure-ASCII words.  For safety we work on ascii offsets
+    // and apply cuts to `word` which is the same string for English words.
+    const cuts = [0];
+
+    for (let n = 0; n < nuclei.length - 1; n++) {
+        const vEnd  = nuclei[n].end;
+        const vNext = nuclei[n + 1].start;
+        const cStart = vEnd + 1;
+        const cEnd   = vNext;          // exclusive — first index of next vowel group
+        const cons   = ascii.substring(cStart, cEnd);
+
+        if (cons.length === 0) continue;  // adjacent vowels — no cut
+
+        let cutAt;
+        if (cons.length === 1) {
+            // V-CV: consonant belongs to next syllable
+            cutAt = cStart;
+        } else {
+            // Find the longest onset blend at the END of the cluster
+            let keepRight = 1;           // default: keep at least 1 consonant with next vowel
+            for (let len = Math.min(3, cons.length); len >= 2; len--) {
+                if (BLENDS.has(cons.substring(cons.length - len))) {
+                    keepRight = len;
+                    break;
+                }
+            }
+            cutAt = cEnd - keepRight;
+            // Guarantee at least one consonant on each side of the cut
+            if (keepRight >= cons.length) cutAt = cStart;  // whole cluster goes right
+            if (cutAt < cStart) cutAt = cStart;
+            if (cutAt >= cEnd)  cutAt = cEnd - 1;
+        }
+
+        cuts.push(cutAt);
+    }
+    cuts.push(word.length);
+
+    const result = [];
+    for (let c = 0; c < cuts.length - 1; c++) {
+        const s = word.substring(cuts[c], cuts[c + 1]);
+        if (s) result.push(s);
+    }
+    return result.length > 1 ? result : [word];
+}
+
+/**
+ * Speak an array of utterances one after another, with a 160 ms gap between each.
+ * Calls done() when the last one finishes (or on error).
+ */
+function _speakSequence(utterances, idx, done) {
+    if (idx >= utterances.length) { done(); return; }
+    const u = utterances[idx];
+    u.onend   = () => setTimeout(() => _speakSequence(utterances, idx + 1, done), 160);
+    u.onerror = done;
+    window.speechSynthesis.speak(u);
+}
+
 function speakWord(word, spanEl) {
     if (!window.speechSynthesis) return;
-    // Cancel any in-progress utterance
     window.speechSynthesis.cancel();
     if (_speakingSpan) { _speakingSpan.classList.remove("speaking"); _speakingSpan = null; }
 
-    // Keep letters, apostrophes, hyphens, AND accented/unicode characters
     const clean = word.replace(/[^\p{L}'\-]/gu, "").trim();
     if (!clean) return;
 
-    const lang = detectWordLang(clean);
-
-    const utter = new SpeechSynthesisUtterance(clean);
-    utter.rate  = 0.85;   // slightly slower for clarity
-    utter.pitch = 1.0;
-    utter.lang  = lang;
-
-    // Try to pick a voice that actually matches the detected language
+    const lang  = detectWordLang(clean);
     const voices = window.speechSynthesis.getVoices();
-    const match  = voices.find(v => v.lang.startsWith(lang.split("-")[0]));
-    if (match) utter.voice = match;
+    const voice  = voices.find(v => v.lang.startsWith(lang.split("-")[0])) || null;
+
+    const mkUtter = (text, rate) => {
+        const u = new SpeechSynthesisUtterance(text);
+        u.rate  = rate;
+        u.pitch = 1.0;
+        u.lang  = lang;
+        if (voice) u.voice = voice;
+        return u;
+    };
 
     spanEl.classList.add("speaking");
     _speakingSpan = spanEl;
-    utter.onend = () => { spanEl.classList.remove("speaking"); _speakingSpan = null; };
-    utter.onerror = () => { spanEl.classList.remove("speaking"); _speakingSpan = null; };
+    const done = () => { spanEl.classList.remove("speaking"); _speakingSpan = null; };
 
-    window.speechSynthesis.speak(utter);
+    const syllables = syllabify(clean);
+
+    if (syllables.length <= 1) {
+        // Short word — just say it once, slightly slow
+        const u = mkUtter(clean, 0.85);
+        u.onend = done; u.onerror = done;
+        window.speechSynthesis.speak(u);
+        return;
+    }
+
+    // Longer word: say it whole first (natural pace), then syllable-by-syllable (slow)
+    const utterances = [mkUtter(clean, 0.85)];
+    for (const syl of syllables) utterances.push(mkUtter(syl, 0.75));
+
+    _speakSequence(utterances, 0, done);
 }
 
 function renderPhraseWithWords(phrase) {
