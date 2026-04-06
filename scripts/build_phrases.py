@@ -471,11 +471,216 @@ def generate_diverse(count=3000):
         "The sixth sick sheikh's sixth sheep's sick.",
     ]
 
+    # ── NEW CATEGORIES (3,000 additional phrases) ─────────────────────────────
+    travel = [
+        "I need to book a flight to New York for next Thursday.",
+        "Can you check if there are any direct flights to Paris?",
+        "My passport expires next month, I need to renew it.",
+        "The hotel says check-in is at three in the afternoon.",
+        "I lost my luggage and need to file a claim with the airline.",
+        "What is the fastest route to downtown from the airport?",
+        "I would like a window seat if one is available please.",
+        "The train to Chicago leaves at half past seven.",
+        "I need to exchange currency before we leave the country.",
+        "Can you recommend a good restaurant near the Eiffel Tower?",
+        "My connecting flight was cancelled and I need to rebook.",
+        "The cruise ship departs from Miami at noon on Friday.",
+        "I need a rental car for the week while I am in Denver.",
+        "Is the resort all-inclusive or do meals cost extra?",
+        "I would like to upgrade to a suite if it is available.",
+        "The taxi driver took the wrong exit and we are now lost.",
+        "My hotel room smells like smoke and I want to switch rooms.",
+        "Can I get a late checkout, I have a two o'clock flight.",
+        "The visa application takes three to four weeks to process.",
+        "I always get terrible jet lag when I travel to Asia.",
+    ]
+    cooking = [
+        "I need to preheat the oven to three hundred fifty degrees.",
+        "Add a pinch of salt and stir until the sugar dissolves.",
+        "The recipe calls for two tablespoons of olive oil.",
+        "Can you chop the onions while I mince the garlic?",
+        "The chicken needs to reach one hundred sixty-five degrees internally.",
+        "I burned the sauce because I forgot to keep stirring.",
+        "Can you pass me the wooden spoon from the second drawer?",
+        "This bread needs to rise for at least an hour before baking.",
+        "I'm trying a new recipe for slow-cooked beef stew tonight.",
+        "The pasta should be cooked al dente, not too soft.",
+        "Fold the egg whites in gently so you don't deflate them.",
+        "I need to dice the tomatoes and julienne the bell peppers.",
+        "This sauce has been simmering for over three hours.",
+        "Can we make enough for leftovers tomorrow?",
+        "The kitchen smells amazing, what are you cooking in there?",
+        "I prefer my steak medium rare with a light pepper crust.",
+        "We are completely out of butter and the store closes soon.",
+        "The caramel needs to reach the hard crack stage before pouring.",
+        "I accidentally added too much chili powder and now it's scorching.",
+        "Let the meat rest for ten minutes before you slice it.",
+    ]
+    shopping = [
+        "Do you have this in a medium or a large?",
+        "I would like to return this jacket, it doesn't fit right.",
+        "Can I use this coupon along with the sale price?",
+        "How much does this cost with tax included?",
+        "I need to find a birthday present for my sister.",
+        "This item is out of stock online but says available in store.",
+        "I'm looking for a gift under fifty dollars for a coworker.",
+        "Do you accept contactless payment or only cards?",
+        "The receipt says the price was wrong at checkout.",
+        "I'd like to split this between two different payment methods.",
+        "Is there a warranty on this appliance?",
+        "I saw this same item on sale at another store.",
+        "Can you hold this item for me until this afternoon?",
+        "I need to find a dress for a black-tie event next weekend.",
+        "The website said free shipping but now it's charging me.",
+        "I only have cash on me, is there an ATM nearby?",
+        "Can I try these shoes on in a size nine?",
+        "This jacket has a small tear in the lining near the pocket.",
+        "I'm trying to stay within my budget for the holidays this year.",
+        "The checkout line is enormous, I'll try self-service instead.",
+    ]
+    work = [
+        "I need to reschedule our meeting to Thursday afternoon.",
+        "The deadline for this project has been moved up by two weeks.",
+        "Can you send me the updated spreadsheet before end of day?",
+        "I'll be working from home on Wednesday and Friday this week.",
+        "The client wants revisions done by tomorrow morning.",
+        "I have back-to-back meetings all day and no time for lunch.",
+        "Can you cover for me on the call at two, I have a conflict?",
+        "My computer crashed and I lost an hour of unsaved work.",
+        "The printer is jammed again and I need this report printed now.",
+        "I need a letter of recommendation by the end of the month.",
+        "Could you review my presentation before I send it to the board?",
+        "The whole team is working overtime to hit the product launch.",
+        "I've been copied on too many emails that don't concern me.",
+        "My boss wants the quarterly report on her desk by Monday.",
+        "I have a performance review coming up and I'm nervous about it.",
+        "Can someone take notes during the meeting, I need to present.",
+        "The conference call kept dropping and we lost half the discussion.",
+        "I put in for two weeks of vacation starting on the fifteenth.",
+        "We need to onboard three new employees starting next Monday.",
+        "The contract still has not been signed and we start next week.",
+    ]
+    relationships = [
+        "I love you and I always will, no matter what.",
+        "We need to talk about what happened last night.",
+        "I feel like you never really listen to what I'm saying.",
+        "I'm so proud of everything you have accomplished.",
+        "I miss spending quality time with you like we used to.",
+        "You are my best friend and I don't say that enough.",
+        "I think we need couples counseling to work through this.",
+        "I was wrong and I want to sincerely apologize.",
+        "Can we please stop arguing and just talk calmly?",
+        "I feel taken for granted and I need you to know that.",
+        "You are the first person I want to call when something happens.",
+        "I appreciate everything you do even when I forget to say so.",
+        "Long-distance relationships are incredibly hard but we're making it work.",
+        "I don't want to lose you over something this small.",
+        "You make me want to be a better person every single day.",
+        "I need some space to think, it's not about you personally.",
+        "Let's plan a date night this weekend, just the two of us.",
+        "I was jealous and I handled it badly, I'm sorry.",
+        "I feel like we are finally communicating better these days.",
+        "Growing old with you is the only future I want.",
+    ]
+    news_current = [
+        "The stock market dropped two percent on heavy trading volume today.",
+        "Scientists have discovered a new species of deep-sea fish near the Mariana Trench.",
+        "A major wildfire is burning across thousands of acres in southern California.",
+        "The city council voted to approve the new public transit expansion plan.",
+        "Inflation has risen slightly but remains within the target range.",
+        "The two world leaders met for a bilateral summit on climate change.",
+        "A new record was set for the fastest electric vehicle in the quarter mile.",
+        "Cybersecurity experts warned of a new ransomware campaign targeting hospitals.",
+        "The hurricane made landfall early this morning as a category three storm.",
+        "Unemployment fell to its lowest point in over two decades last quarter.",
+        "Local officials declared a state of emergency after severe flooding overnight.",
+        "A groundbreaking new treatment for Alzheimer's disease is entering clinical trials.",
+        "The tech giant announced layoffs affecting nearly ten thousand employees.",
+        "A historic peace agreement was signed after three years of negotiations.",
+        "Astronomers detected an exoplanet with conditions potentially suitable for life.",
+    ]
+    humor = [
+        "I asked my cat what two minus two was, and he said nothing.",
+        "Why do we park in driveways and drive on parkways?",
+        "I told my doctor I broke my arm in two places and he said stop going to those places.",
+        "The best part of waking up is going back to sleep.",
+        "My wifi password is the last four digits of my weight.",
+        "I'm not lazy, I'm just on energy-saving mode.",
+        "I put the fun in functional and then removed it.",
+        "My memory is so bad I tried to pull up my own name and it buffered.",
+        "I'm not arguing, I'm just passionately explaining why I'm right.",
+        "I do my best thinking in the shower where I have no way to write anything down.",
+        "Why do they call it rush hour when nothing moves?",
+        "I'm on a seafood diet. I see food and I eat it.",
+        "The elevator was broken so I took steps to avoid it.",
+        "I told a pun about stairs but it was a step too far.",
+        "My sleep schedule is a work of abstract fiction.",
+    ]
+    mental_wellness = [
+        "I've been practicing mindfulness and it's genuinely helping my anxiety.",
+        "Taking a walk outside completely changed my mood today.",
+        "I journaled for thirty minutes this morning and felt so much lighter.",
+        "Therapy taught me that my feelings are valid even when they're uncomfortable.",
+        "I need to stop catastrophizing and focus on what I can control.",
+        "Breathing deeply for just sixty seconds really does calm me down.",
+        "Setting boundaries is an act of self-respect, not selfishness.",
+        "I'm learning to sit with discomfort instead of running from it.",
+        "Progress is not always linear and that is completely okay.",
+        "I am not my intrusive thoughts, I am the one noticing them.",
+        "Rest is not a reward, it is a basic human need.",
+        "I'm choosing to release what I cannot change.",
+        "Asking for help is a sign of courage, not weakness.",
+        "I am enough exactly as I am, even on my hardest days.",
+        "Healing is not a destination, it is an ongoing process.",
+        "I deserve kindness from myself the same way I give it to others.",
+        "My body is telling me it needs rest and I am going to listen.",
+        "I am not behind. I am on my own timeline.",
+        "Even five minutes of stillness can reset a difficult day.",
+        "I am practicing self-compassion and it is changing everything.",
+    ]
+    history = [
+        "The First World War began in nineteen fourteen and ended four years later.",
+        "The fall of the Berlin Wall in nineteen eighty-nine symbolized the end of the Cold War.",
+        "Ancient Rome was one of the most powerful empires in human history.",
+        "The moon landing in nineteen sixty-nine was a defining moment for humanity.",
+        "The Great Depression devastated economies around the world throughout the nineteen thirties.",
+        "The printing press revolutionized the spread of information in the fifteenth century.",
+        "Napoleon was exiled to the island of Elba after his defeat at Leipzig.",
+        "The civil rights movement transformed American society throughout the nineteen sixties.",
+        "The pyramids of Giza were built over four thousand five hundred years ago.",
+        "The signing of the Magna Carta in twelve fifteen limited the power of the king.",
+        "The Industrial Revolution began in Britain and spread across the world.",
+        "World War Two ended in Europe on the eighth of May, nineteen forty-five.",
+        "The Renaissance was a period of extraordinary artistic and intellectual achievement.",
+        "Alexander the Great conquered most of the known world by the age of thirty.",
+        "The atomic bomb changed the nature of warfare and global politics forever.",
+    ]
+    sports = [
+        "He sprinted down the sideline and scored in the final thirty seconds.",
+        "The referee called a foul and the crowd went absolutely wild.",
+        "She trained every morning at five just to make it to the Olympics.",
+        "The home team hasn't lost a game on this field in three seasons.",
+        "That was an incredible come-from-behind victory in double overtime.",
+        "He broke the world record by nearly two full seconds.",
+        "The match went to a fifth set tiebreaker before anyone could blink.",
+        "She sank the winning putt from forty feet away without hesitating.",
+        "The draft pick has already exceeded every expectation set for him.",
+        "They won the championship without losing a single game all season.",
+        "The coach called a timeout with three seconds left and drew up the perfect play.",
+        "Her serve hit the line and the crowd erupted into complete chaos.",
+        "He came back from a career-ending injury to win the gold medal.",
+        "The stadium went silent as the penalty kick sailed wide of the post.",
+        "She set a new personal best and burst into tears at the finish line.",
+    ]
+
     all_pool = (anger * 3 + happiness * 3 + sadness * 3 + fear * 3 +
                 religious * 2 + scientific * 2 + sexual * 2 + curse * 2 +
                 general_short * 5 + general_long * 2 + nature * 2 +
                 technology * 2 + medical * 2 + everyday * 4 +
-                motivational * 2 + playful * 2)
+                motivational * 2 + playful * 2 +
+                travel * 3 + cooking * 3 + shopping * 3 + work * 3 +
+                relationships * 3 + news_current * 2 + humor * 3 +
+                mental_wellness * 3 + history * 2 + sports * 3)
 
     phrases = set()
     pool_cycle = list(all_pool)
@@ -511,6 +716,53 @@ _BROKEN_FRAGMENTS = {
     'pleasura', 'unmistaka', 'imagina', 'recogni', 'recogniz', 'recognis',
     'organi', 'organiz', 'individu', 'differe', 'exper', 'experi', 'impor',
     'imposs', 'impossib', 'represen', 'demonstr',
+}
+
+# Second fragments after a hyphen that are NEVER standalone words
+# These signal OCR line-break hyphens: "ther-apy", "num-bers", "sta-ble"
+_BAD_HYPHEN_SUFFIXES = {
+    'apy',       # ther-apy → therapy
+    'ble',       # sta-ble → stable
+    'bers',      # num-bers → numbers
+    'bilities',  # vulnera-bilities → vulnerabilities
+    'iour',      # behav-iour → behaviour
+    'ders',      # disor-ders → disorders
+    'nents',     # expo-nents → exponents
+    'dinates',   # coor-dinates → coordinates
+    'erties',    # prop-erties → properties
+    'tive',      # representa-tive → representative, nega-tive → negative
+    'uals',      # individ-uals → individuals
+    'ity',       # real-ity → reality
+    'spond',     # corre-spond → correspond
+    'tions',     # emo-tions → emotions, conversa-tions → conversations
+    'encing',    # experi-encing → experiencing
+    'icant',     # signifi-cant → significant
+    'plating',   # contem-plating → contemplating
+    'rying',     # car-rying → carrying
+    'lling',     # contro-lling → controlling
+    'ssing',     # proce-ssing → processing
+    'rning',     # concer-ning → concerning
+    'iting',     # wri-ting → writing (short prefix)
+    'ling',      # mode-ling → modeling
+}
+
+# First fragments before a hyphen that are NEVER standalone words
+# Used only in hyphen context check
+_BAD_HYPHEN_PREFIXES = {
+    'contem', 'signifi', 'vulnera', 'behav', 'disor', 'expo', 'coor',
+    'repre', 'represen', 'individ', 'conversa', 'emo', 'experi', 'nega',
+    'sta',    # sta-ble
+    'num',    # num-bers
+    'corre',  # corre-spond
+    'deter',  # deter-mine
+    'ther',   # ther-apy
+    'por',    # por-trayal
+    'psy',    # psy-chology
+    'psycho', # psycho-logical (when broken mid-word)
+    'opyright',  # opyright → OCR ate first letter
+    'ognitive',  # ognitive → OCR ate first letter
+    'counterde', # counterde-pendence
+    'overwhelm', # overwhelm-ing (should be one word "overwhelming")
 }
 
 # Psychoanalytic / Freudian academic source text — not suitable for STT
@@ -587,9 +839,21 @@ def is_clean(phrase):
     if re.search(r'\d+\.\d+\.\d+', p):
         return False
 
-    # No broken hyphenation (dash then space then lowercase)
+    # No broken hyphenation (dash then space then lowercase: "word- word")
     if re.search(r'[a-z]-\s[a-z]', p):
         return False
+
+    # Blocked academic/clinical content + OCR fragment checks need lowercase version
+    pl = p.lower()
+
+    # Detect OCR line-break hyphens: "ther-apy", "num-bers", "sta-ble", "por-trayal"
+    # Check both the bad suffix AND bad prefix sets
+    for m in re.finditer(r'([a-z]{2,})-([a-z]{2,})', pl):
+        first, second = m.group(1), m.group(2)
+        if second in _BAD_HYPHEN_SUFFIXES:
+            return False
+        if first in _BAD_HYPHEN_PREFIXES:
+            return False
 
     # No ALL-CAPS blocks
     if re.search(r'[A-Z]{5,}', p):
@@ -612,7 +876,6 @@ def is_clean(phrase):
         return False
 
     # Blocked academic/clinical content
-    pl = p.lower()
     if any(block in pl for block in _ACADEMIC_BLOCKLIST):
         return False
 
@@ -622,6 +885,9 @@ def is_clean(phrase):
         return False
     # Detect "I" stuck to a verb at start (no space): "Igrew", "Iwas", "Iam", "Iwent"
     if re.match(r'^I(grew|was|were|went|am|are|have|had|can|will|would|did|do|need|want|see|saw|know|feel|felt|think|believe|said|told|asked|tried|used|got|get|gave|give|took|take|made|make|came|come|ran|run|sat|sit|stood|stand|walked|talked|called)', p):
+        return False
+    # Detect "br other" / "m other" / "f ather" style stuck family words
+    if re.search(r'\bbr other\b|\bm other\b|\bf ather\b|\bs ister\b|\bb rother\b', pl):
         return False
 
     # Detect OCR mid-word split using known non-word fragments
@@ -661,8 +927,8 @@ def main():
     print("Adding 100 curated phrases...")
     all_phrases.update(CURATED)
 
-    print("Generating 3000 diverse synthetic phrases...")
-    synthetic = generate_diverse(3000)
+    print("Generating 6000 diverse synthetic phrases...")
+    synthetic = generate_diverse(6000)
     all_phrases.update(synthetic)
 
     final = sorted(all_phrases)
