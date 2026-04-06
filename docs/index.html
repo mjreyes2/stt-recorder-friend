@@ -192,15 +192,54 @@
 
         /* Upload indicator */
         .upload-status {
-            text-align: center;
-            padding: 0.5rem;
-            font-size: 0.85rem;
-            border-radius: 8px;
             display: none;
+            border-radius: 12px;
+            overflow: hidden;
         }
-        .upload-status.uploading { display: block; background: rgba(253, 203, 110, 0.15); color: var(--warning); }
-        .upload-status.success { display: block; background: rgba(0, 184, 148, 0.15); color: var(--success); }
-        .upload-status.error { display: block; background: rgba(225, 112, 85, 0.15); color: var(--danger); }
+        .upload-status.uploading,
+        .upload-status.success,
+        .upload-status.error { display: block; }
+
+        .upload-box {
+            padding: 1rem 1.2rem;
+            border-radius: 12px;
+            text-align: center;
+        }
+        .upload-status.uploading .upload-box { background: rgba(253, 203, 110, 0.12); }
+        .upload-status.success  .upload-box { background: rgba(0, 184, 148, 0.12); }
+        .upload-status.error    .upload-box { background: rgba(225, 112, 85, 0.12); }
+
+        .upload-label {
+            font-size: 1rem;
+            font-weight: 600;
+            letter-spacing: 0.03em;
+            margin-bottom: 0.6rem;
+        }
+        .upload-status.uploading .upload-label { color: var(--warning); }
+        .upload-status.success  .upload-label { color: var(--success); }
+        .upload-status.error    .upload-label { color: var(--danger); }
+
+        .upload-bar-wrap {
+            background: rgba(255,255,255,0.08);
+            border-radius: 999px;
+            height: 10px;
+            overflow: hidden;
+            margin-bottom: 0.4rem;
+        }
+        .upload-bar {
+            height: 100%;
+            border-radius: 999px;
+            width: 0%;
+            transition: width 0.25s ease;
+        }
+        .upload-status.uploading .upload-bar { background: var(--warning); }
+        .upload-status.success  .upload-bar { background: var(--success); width: 100% !important; }
+        .upload-status.error    .upload-bar { background: var(--danger); }
+
+        .upload-pct {
+            font-size: 0.82rem;
+            opacity: 0.7;
+        }
 
         /* Visualizer */
         #visualizer {
@@ -336,7 +375,15 @@
             <div class="record-status" id="record-status">Tap to start recording</div>
         </div>
 
-        <div class="upload-status" id="upload-status"></div>
+        <div class="upload-status" id="upload-status">
+            <div class="upload-box">
+                <div class="upload-label" id="upload-label"></div>
+                <div class="upload-bar-wrap" id="upload-bar-wrap" style="display:none;">
+                    <div class="upload-bar" id="upload-bar"></div>
+                </div>
+                <div class="upload-pct" id="upload-pct"></div>
+            </div>
+        </div>
 
         <audio id="playback-audio" controls style="display:none; width:100%; margin-top:0.5rem;"></audio>
 
@@ -757,7 +804,7 @@ async function acceptAndNext() {
         try {
             await uploadToAppsScript(audioBlob, filename, phrase, phraseIdx);
             recordings[recordings.length - 1].uploaded = true;
-            showUploadStatus("success", "✅ Saved to Google Drive");
+            showUploadStatus("success", "✅ Upload Complete");
         } catch (e) {
             showUploadStatus("error", "⚠️ Upload failed — saved locally");
             console.error("Upload error:", e);
@@ -809,7 +856,7 @@ async function acceptAndCurrent() {
         try {
             await uploadToAppsScript(audioBlob, filename, phrase, phraseIdx);
             recordings[recordings.length - 1].uploaded = true;
-            showUploadStatus("success", `✅ Version ${repeatCounts[repeatKey]} saved!`);
+            showUploadStatus("success", `✅ Upload Complete`);
         } catch (e) {
             showUploadStatus("error", "⚠️ Upload failed — saved locally");
         }
@@ -845,13 +892,50 @@ async function uploadToAppsScript(blob, filename, phrase, phraseIndex) {
     return true;
 }
 
+let _uploadTimer = null;
+
 function showUploadStatus(type, text) {
-    const el = document.getElementById("upload-status");
+    const el    = document.getElementById("upload-status");
+    const label = document.getElementById("upload-label");
+    const bar   = document.getElementById("upload-bar");
+    const wrap  = document.getElementById("upload-bar-wrap");
+    const pct   = document.getElementById("upload-pct");
+
     el.className = "upload-status " + type;
-    el.textContent = text;
+    label.textContent = text;
+
+    // Clear any previous timer
+    if (_uploadTimer) { clearInterval(_uploadTimer); _uploadTimer = null; }
+
+    if (type === "uploading") {
+        wrap.style.display = "block";
+        bar.style.width = "0%";
+        pct.textContent = "0%";
+        let progress = 0;
+        _uploadTimer = setInterval(() => {
+            // Ease toward 90% — never reaches 100 until success
+            const step = Math.random() * 6 + 2;
+            progress = Math.min(progress + step, 90);
+            bar.style.width = progress + "%";
+            pct.textContent = Math.round(progress) + "%";
+        }, 220);
+    } else if (type === "success") {
+        wrap.style.display = "block";
+        bar.style.width = "100%";
+        pct.textContent = "100%";
+    } else {
+        wrap.style.display = "none";
+        pct.textContent = "";
+    }
 }
+
 function hideUploadStatus() {
-    document.getElementById("upload-status").className = "upload-status";
+    if (_uploadTimer) { clearInterval(_uploadTimer); _uploadTimer = null; }
+    const el = document.getElementById("upload-status");
+    el.className = "upload-status";
+    document.getElementById("upload-bar").style.width = "0%";
+    document.getElementById("upload-pct").textContent = "";
+    document.getElementById("upload-bar-wrap").style.display = "none";
 }
 
 // Download all recordings as individual files
