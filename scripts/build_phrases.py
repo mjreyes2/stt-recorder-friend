@@ -499,23 +499,133 @@ def generate_diverse(count=3000):
 
 
 # ── Phrase cleaner ─────────────────────────────────────────────────────────────
+
+# Words that are NOT valid standalone English words and signal a broken/split word
+# when they appear as the first part of a suspected word split
+_NOT_STANDALONE = {
+    'acqu','indepe','depen','rec','un','pre','con','dis','re','mis','over',
+    'under','inter','trans','sub','super','anti','semi','neo','non','pro',
+    'tele','micro','macro','bio','geo','auto','multi','poly','mono','hypo',
+    'hyper','pseudo','quasi','peri','para','meta','infra','ultra','extra',
+}
+
+# Psychoanalytic / Freudian academic source text — not suitable for STT
+_ACADEMIC_BLOCKLIST = [
+    'gratification from the acquiescence',
+    'pleasure principle',
+    'reality principle',
+    'instinctual drive',
+    'unconscious wish',
+    'wish fulfillment',
+    'libidinal',
+    'cathexis',
+    'phantasy',
+    'sublimation of',
+    'narcissistic gratification',
+    'psychosexual',
+    'transference neurosis',
+    'anxiety neurosis',
+    'the dreamer',
+    'dream analysis',
+    'archaic form',
+    'imaginative happiness',
+    'acquiescence of reality',
+    'restoration of the independence',
+    'pleasurable gratification',
+    # Art therapy textbook content
+    'mural paper',
+    'construction paper, glue',
+    'doily cut',
+    'art therapy',
+    'art therapist',
+    'the client named',
+    'clinically depressed client',
+    'paint to illustrate',
+    'art technique',
+    'mask making',
+    # Textbook exercise markers
+    'workbook',
+    # German/foreign language artifacts from OCR
+    'fliegende blätter',
+    'in f., and since',
+]
+
 def is_clean(phrase):
     p = phrase.strip()
-    if len(p) < 4 or len(p) > 300:
+
+    # Length bounds
+    if len(p) < 8 or len(p) > 250:
         return False
-    if re.search(r'\(\s*\)', p): return False
-    if re.search(r'\d+x\s*[\+\-]', p): return False
-    if re.search(r'\\[a-zA-Z]', p): return False
-    if re.search(r'\d{4,}', p): return False
-    if re.search(r'\(\w+,\s*\d{4}\)', p): return False
-    if re.search(r'\d+\.\d+\.\d+', p): return False
-    if re.search(r'[a-z]-\s[a-z]', p): return False
-    if re.search(r'\s{2,}', p): return False
-    if re.search(r'[A-Z]{5,}', p): return False
-    if 'andthen' in p.lower(): return False
-    if re.search(r'[a-z]s\s+in\b', p): return False
-    if not p[0].isalpha(): return False
-    if p[-1] not in '.?!': return False
+
+    # Must start with a letter
+    if not p[0].isalpha():
+        return False
+
+    # Must end with sentence-ending punctuation
+    if p[-1] not in '.?!':
+        return False
+
+    # No double spaces (OCR artifact)
+    if re.search(r'\s{2,}', p):
+        return False
+
+    # No LaTeX / backslash commands
+    if re.search(r'\\[a-zA-Z]', p):
+        return False
+
+    # No academic citation patterns
+    if re.search(r'\(\w+,\s*\d{4}\)', p):
+        return False
+    if re.search(r'\bp\.\s*\d+|\bpp\.\s*\d+|\bibid\b|\bet al\.', p.lower()):
+        return False
+
+    # No version numbers or IP-style sequences
+    if re.search(r'\d+\.\d+\.\d+', p):
+        return False
+
+    # No broken hyphenation (dash then space then lowercase)
+    if re.search(r'[a-z]-\s[a-z]', p):
+        return False
+
+    # No ALL-CAPS blocks
+    if re.search(r'[A-Z]{5,}', p):
+        return False
+
+    # No 4+ digit numbers (years, codes, etc.)
+    if re.search(r'\b\d{4,}\b', p):
+        return False
+
+    # No math operators
+    if re.search(r'\d+x\s*[\+\-]', p):
+        return False
+
+    # Blocked academic/clinical content
+    pl = p.lower()
+    if any(block in pl for block in _ACADEMIC_BLOCKLIST):
+        return False
+
+    # Detect OCR mid-word split: fragment (3-7 chars, known non-word prefix) followed by continuation
+    for m in re.finditer(r'\b([a-z]{3,7}) ([a-z]{3,8})\b', pl):
+        frag = m.group(1)
+        cont = m.group(2)
+        combined = frag + cont
+        if frag in _NOT_STANDALONE and len(combined) >= 8:
+            return False
+
+    # Detect mid-word hyphenation breaks: 'indepe ndence', 'differe ntiate', 'sym ptom'
+    # The continuation starts with a consonant cluster that can't begin an English word
+    if re.search(r'\b[a-z]{3,8} (?:nd|nt|nc|ng|ld|lk|lm|lp|lt|rb|rd|rk|rm|rn|rp|rt|ck|ct|ft|pt)[a-z]+\b', pl):
+        return False
+
+    # Textbook-style title/heading that isn't a proper sentence
+    # e.g. "A Is for Accomplished: Writing at School..."
+    if re.match(r'^[A-Z][a-z]+ (Is|For|And) [A-Z][a-z]', p):
+        return False
+
+    # Truncated phrases that end abruptly (common OCR artifact)
+    if re.search(r'\s[a-z]{1,3}$', p.rstrip('.?!')):
+        return False
+
     return True
 
 

@@ -627,7 +627,10 @@ function toggleRecord() {
     }
 }
 
+let _redoPending = false; // flag: redo was clicked — discard next onstop result
+
 function startRec() {
+    _redoPending = false;
     audioChunks = [];
     const mimeType = getSupportedMimeType();
     const options = mimeType ? { mimeType } : {};
@@ -636,6 +639,8 @@ function startRec() {
         if (e.data && e.data.size > 0) audioChunks.push(e.data);
     };
     mediaRecorder.onstop = () => {
+        // If redo was clicked while recording, discard this result
+        if (_redoPending) { _redoPending = false; return; }
         if (audioChunks.length === 0) {
             document.getElementById("record-status").textContent = "⚠️ No audio captured — check your microphone";
             return;
@@ -688,14 +693,33 @@ function playback() {
 }
 
 function redoPhrase() {
+    // If recording is in progress, set flag so onstop discards the result
+    if (isRecording) {
+        _redoPending = true;
+        stopRec();
+    }
+    // Clear all recording state
     audioBlob = null;
     audioUrl = null;
+    audioChunks = [];
+    isRecording = false;
+    // Reset UI elements — deliberately NOT calling showPhrase() to avoid any index side-effects
+    document.getElementById("record-btn").classList.remove("recording");
+    document.getElementById("post-record-actions").style.display = "none";
+    document.getElementById("repeat-hint").style.display = "none";
     const audioEl = document.getElementById("playback-audio");
     audioEl.style.display = "none";
     audioEl.src = "";
-    document.getElementById("post-record-actions").style.display = "none";
-    document.getElementById("record-status").textContent = "Tap to start recording";
     hideUploadStatus();
+    document.getElementById("record-status").textContent = "Tap to start recording";
+    // Re-render the SAME phrase (currentIndex is unchanged — that's the whole point)
+    const phrase = sessionPhrases[currentIndex];
+    document.getElementById("phrase-text").textContent = phrase;
+    // Keep emotion banner accurate for this phrase
+    const cue = getEmotionCue(phrase);
+    const banner = document.getElementById("emotion-banner");
+    if (cue) { document.getElementById("emotion-prompt").textContent = cue; banner.style.display = "block"; }
+    else { banner.style.display = "none"; }
 }
 
 function skipPhrase() {
