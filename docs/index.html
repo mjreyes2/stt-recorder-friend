@@ -465,18 +465,29 @@ function toggleRecord() {
 
 function startRec() {
     audioChunks = [];
-    mediaRecorder = new MediaRecorder(stream, { mimeType: getSupportedMimeType() });
+    const mimeType = getSupportedMimeType();
+    const options = mimeType ? { mimeType } : {};
+    mediaRecorder = new MediaRecorder(stream, options);
     mediaRecorder.ondataavailable = (e) => {
-        if (e.data.size > 0) audioChunks.push(e.data);
+        if (e.data && e.data.size > 0) audioChunks.push(e.data);
     };
     mediaRecorder.onstop = () => {
-        const mimeType = getSupportedMimeType() || "audio/webm";
-        audioBlob = new Blob(audioChunks, { type: mimeType });
+        if (audioChunks.length === 0) {
+            document.getElementById("record-status").textContent = "⚠️ No audio captured — check your microphone";
+            return;
+        }
+        const finalMime = mimeType || "audio/webm";
+        audioBlob = new Blob(audioChunks, { type: finalMime });
         audioUrl = URL.createObjectURL(audioBlob);
         document.getElementById("post-record-actions").style.display = "flex";
         document.getElementById("record-status").textContent = "Recording complete — review below";
+        // Auto-show player
+        const audioEl = document.getElementById("playback-audio");
+        audioEl.src = audioUrl;
+        audioEl.style.display = "block";
+        audioEl.load();
     };
-    mediaRecorder.start();
+    mediaRecorder.start(100); // collect data every 100ms
     isRecording = true;
     document.getElementById("record-btn").classList.add("recording");
     document.getElementById("record-status").textContent = "🔴 Recording... tap to stop";
