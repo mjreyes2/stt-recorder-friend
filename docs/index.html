@@ -316,6 +316,10 @@
         </div>
 
         <div class="phrase-card">
+            <div id="emotion-banner" style="display:none; background:linear-gradient(135deg,#6c5ce7,#a29bfe); color:white; border-radius:10px; padding:0.7rem 1rem; margin-bottom:0.6rem; text-align:center;">
+                <div id="emotion-prompt" style="font-size:1rem; font-weight:600;"></div>
+                <div style="font-size:0.75rem; opacity:0.85; margin-top:0.2rem;">If you can't feel it, that's totally fine — just say it anyway and move on. 😊</div>
+            </div>
             <div class="phrase-label">Read this phrase aloud:</div>
             <div class="phrase-text" id="phrase-text">Loading...</div>
         </div>
@@ -545,6 +549,42 @@ async function startRecording() {
     showPhrase();
 }
 
+// Emotion coaching — detect emotional content and show coaching banner
+const EMOTION_CUES = [
+    { keywords: ["i am angry", "i'm angry", "i hate", "this is stupid", "so frustrating", "drives me crazy", "i'm furious", "makes me mad", "i can't stand", "i'm so mad", "damn", "hell", "screw", "shut up", "go away", "leave me alone"],
+      prompt: "😤 Try to feel ANGER as you say it — tense your jaw, furrow your brow." },
+    { keywords: ["i am happy", "i'm happy", "i love", "so excited", "this is amazing", "wonderful", "fantastic", "i'm thrilled", "so glad", "i'm delighted", "yay", "hooray", "awesome", "great news", "so blessed"],
+      prompt: "😄 Try to feel JOY as you say it — smile, let your voice lift!" },
+    { keywords: ["i am sad", "i'm sad", "i miss", "i lost", "i'm heartbroken", "this hurts", "i feel empty", "i cried", "i'm lonely", "i'm depressed", "i'm devastated", "i'm grieving", "i'm mourning"],
+      prompt: "😢 Try to feel SADNESS as you say it — let your voice soften and slow down." },
+    { keywords: ["i am scared", "i'm scared", "i'm afraid", "i'm terrified", "that's scary", "i'm nervous", "i'm anxious", "i'm worried", "i'm panicking", "what if something goes wrong", "i'm dreading"],
+      prompt: "😨 Try to feel FEAR as you say it — let your voice tremble slightly." },
+    { keywords: ["i am surprised", "i'm shocked", "no way", "i can't believe", "oh my god", "that's unbelievable", "i had no idea", "what the", "are you serious", "i'm blown away", "i'm stunned"],
+      prompt: "😲 Try to feel SURPRISE as you say it — widen your eyes, let your voice jump up!" },
+    { keywords: ["i am disgusted", "that's gross", "that's revolting", "i'm sickened", "how dare", "that's repulsive", "makes me sick", "i'm appalled"],
+      prompt: "🤢 Try to feel DISGUST as you say it — let your voice show revulsion." },
+    { keywords: ["i love you", "you mean everything to me", "i adore you", "i cherish", "you are my everything", "with all my heart", "forever and always", "i care for you deeply"],
+      prompt: "❤️ Try to feel LOVE as you say it — speak warmly and tenderly." },
+    { keywords: ["god", "lord", "jesus", "pray", "amen", "blessed", "holy", "church", "faith", "allah", "buddha", "heaven", "soul", "spirit", "worship", "scripture", "bible", "quran", "temple", "sacred"],
+      prompt: "🙏 Speak this with reverence and calm, as if in a quiet, sacred space." },
+    { keywords: ["quantum", "photosynthesis", "hypothesis", "molecule", "atom", "electron", "neutron", "proton", "gravitational", "relativity", "chromosome", "mitochondria", "neural network", "algorithm", "derivative", "theorem"],
+      prompt: "🔬 Speak this clearly and precisely, like a scientist presenting findings." },
+    { keywords: ["f**k", "fuck", "shit", "bitch", "asshole", "bastard", "crap", "damn it", "son of a bitch", "what the fuck", "are you kidding me"],
+      prompt: "🤬 Deliver this with raw, uncensored emotional energy — don't hold back!" },
+    { keywords: ["i need you", "please don't leave", "i'm begging", "i'm desperate", "i can't do this alone", "please help me", "i'm at my limit", "i give up"],
+      prompt: "💔 Try to feel DESPERATION as you say it — let your voice crack with vulnerability." },
+    { keywords: ["i'm so proud", "you did it", "we made it", "congratulations", "what an achievement", "well done", "i'm impressed", "that's incredible work"],
+      prompt: "🏆 Try to feel PRIDE as you say it — speak with confidence and warmth." },
+];
+
+function getEmotionCue(phrase) {
+    const lower = phrase.toLowerCase();
+    for (const cue of EMOTION_CUES) {
+        if (cue.keywords.some(k => lower.includes(k))) return cue.prompt;
+    }
+    return null;
+}
+
 function showPhrase() {
     if (currentIndex >= sessionPhrases.length) {
         endSession();
@@ -563,6 +603,20 @@ function showPhrase() {
     hideUploadStatus();
     audioBlob = null;
     audioUrl = null;
+    // Hide repeat hint and audio player
+    document.getElementById("repeat-hint").style.display = "none";
+    const audioEl = document.getElementById("playback-audio");
+    audioEl.style.display = "none";
+    audioEl.src = "";
+    // Emotion coaching banner
+    const cue = getEmotionCue(phrase);
+    const banner = document.getElementById("emotion-banner");
+    if (cue) {
+        document.getElementById("emotion-prompt").textContent = cue;
+        banner.style.display = "block";
+    } else {
+        banner.style.display = "none";
+    }
 }
 
 function toggleRecord() {
