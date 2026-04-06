@@ -468,7 +468,8 @@ function startRec() {
         if (e.data.size > 0) audioChunks.push(e.data);
     };
     mediaRecorder.onstop = () => {
-        audioBlob = new Blob(audioChunks, { type: "audio/webm" });
+        const mimeType = getSupportedMimeType() || "audio/webm";
+        audioBlob = new Blob(audioChunks, { type: mimeType });
         audioUrl = URL.createObjectURL(audioBlob);
         document.getElementById("post-record-actions").style.display = "flex";
         document.getElementById("record-status").textContent = "Recording complete — review below";
@@ -499,7 +500,10 @@ function getSupportedMimeType() {
 function playback() {
     if (!audioUrl) return;
     const audio = new Audio(audioUrl);
-    audio.play();
+    audio.play().catch(err => {
+        console.error("Playback error:", err);
+        alert("Playback failed. Please check your volume and try again.");
+    });
 }
 
 function redoPhrase() {
