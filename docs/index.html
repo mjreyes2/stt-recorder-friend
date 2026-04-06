@@ -271,6 +271,8 @@
                 No software to install! Everything works right here in your browser.
                 <br><br>
                 <strong>Tips:</strong> Use a quiet room, speak clearly at normal pace, and use Chrome or Edge for best results.
+                <br><br>
+                💡 <strong>Want to help even more?</strong> Use the <em>Repeat Phrase</em> button to record the same phrase multiple times — try saying it <em>fast, slow, excited, calm, or whispering</em>. Different tones and styles make Monica smarter!
             </div>
         </div>
         <div class="setup-card">
@@ -339,6 +341,11 @@
             <button class="btn btn-danger" onclick="redoPhrase()">🔄 Redo</button>
             <button class="btn btn-outline" onclick="skipPhrase()">⏭ Skip</button>
             <button class="btn btn-success" onclick="acceptAndNext()">✅ Accept & Next</button>
+            <button class="btn btn-outline" onclick="repeatPhrase()" title="Record this phrase again in a different tone">🔁 Repeat Phrase</button>
+        </div>
+        <div id="repeat-hint" style="display:none; font-size:0.8rem; color:var(--text-muted); text-align:center; margin-top:0.3rem;">
+            Try saying it differently — fast, slow, excited, or calm!<br>
+            <span id="repeat-count"></span>
         </div>
 
         <div class="action-buttons" style="margin-top: 0.5rem;">
@@ -379,6 +386,7 @@ let audioContext = null;
 let analyser = null;
 let animFrameId = null;
 let completedCount = 0;
+let repeatCounts = {}; // tracks how many times each phrase has been recorded
 let stream = null;
 let selectedDeviceId = "";
 let levelAnimId = null;
@@ -645,13 +653,20 @@ async function acceptAndNext() {
     if (!audioBlob) return;
     const phrase = sessionPhrases[currentIndex];
     const phraseIdx = phrases.indexOf(phrase);
-    // Filename: Name_PhraseText.wav (sanitized: lowercase, spaces to underscores, max 80 chars)
     const safePhrase = phrase.toLowerCase().replace(/[^a-z0-9 ]/g, "").trim().replace(/\s+/g, "_").slice(0, 80);
-    const filename = `${recorderName}_${safePhrase}.wav`;
+
+    // Track repeat count for unique filenames
+    const repeatKey = `${recorderName}_${safePhrase}`;
+    repeatCounts[repeatKey] = (repeatCounts[repeatKey] || 0) + 1;
+    const repeatSuffix = repeatCounts[repeatKey] > 1 ? `_v${repeatCounts[repeatKey]}` : "";
+    const filename = `${recorderName}_${safePhrase}${repeatSuffix}.wav`;
 
     // Store locally
     recordings.push({ phrase, index: phraseIdx, blob: audioBlob, filename, uploaded: false });
     completedCount++;
+
+    // Hide repeat hint
+    document.getElementById("repeat-hint").style.display = "none";
 
     // Save progress
     localStorage.setItem(`stt_progress_${recorderName}`, JSON.stringify({
@@ -675,6 +690,53 @@ async function acceptAndNext() {
     // Move to next
     currentIndex++;
     setTimeout(() => showPhrase(), APPS_SCRIPT_URL ? 800 : 200);
+}
+
+// Repeat the current phrase — save current recording then re-record same phrase
+async function repeatPhrase() {
+    if (!audioBlob) return;
+    // First save the current recording
+    await acceptAndCurrent();
+    // Stay on same phrase, reset recording state
+    audioBlob = null;
+    audioUrl = null;
+    const audioEl = document.getElementById("playback-audio");
+    audioEl.style.display = "none";
+    audioEl.src = "";
+    document.getElementById("post-record-actions").style.display = "none";
+    document.getElementById("record-status").textContent = "🎭 Say it differently — tap to record again";
+    hideUploadStatus();
+    // Show tip
+    const phrase = sessionPhrases[currentIndex];
+    const safePhrase = phrase.toLowerCase().replace(/[^a-z0-9 ]/g, "").trim().replace(/\s+/g, "_").slice(0, 80);
+    const repeatKey = `${recorderName}_${safePhrase}`;
+    const count = repeatCounts[repeatKey] || 0;
+    document.getElementById("repeat-hint").style.display = "block";
+    document.getElementById("repeat-count").textContent = `${count} version${count !== 1 ? "s" : ""} saved for this phrase`;
+}
+
+// Save current recording without advancing to next phrase
+async function acceptAndCurrent() {
+    if (!audioBlob) return;
+    const phrase = sessionPhrases[currentIndex];
+    const phraseIdx = phrases.indexOf(phrase);
+    const safePhrase = phrase.toLowerCase().replace(/[^a-z0-9 ]/g, "").trim().replace(/\s+/g, "_").slice(0, 80);
+    const repeatKey = `${recorderName}_${safePhrase}`;
+    repeatCounts[repeatKey] = (repeatCounts[repeatKey] || 0) + 1;
+    const repeatSuffix = repeatCounts[repeatKey] > 1 ? `_v${repeatCounts[repeatKey]}` : "";
+    const filename = `${recorderName}_${safePhrase}${repeatSuffix}.wav`;
+    recordings.push({ phrase, index: phraseIdx, blob: audioBlob, filename, uploaded: false });
+    completedCount++;
+    if (APPS_SCRIPT_URL) {
+        showUploadStatus("uploading", "⏳ Saving version...");
+        try {
+            await uploadToAppsScript(audioBlob, filename, phrase, phraseIdx);
+            recordings[recordings.length - 1].uploaded = true;
+            showUploadStatus("success", `✅ Version ${repeatCounts[repeatKey]} saved!`);
+        } catch (e) {
+            showUploadStatus("error", "⚠️ Upload failed — saved locally");
+        }
+    }
 }
 
 async function uploadToAppsScript(blob, filename, phrase, phraseIndex) {
