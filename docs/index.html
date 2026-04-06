@@ -143,7 +143,28 @@
             justify-content: center;
         }
         .phrase-label { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.8rem; text-transform: uppercase; letter-spacing: 1px; }
-        .phrase-text { font-size: 1.3rem; line-height: 1.6; font-weight: 400; }
+        .phrase-text { font-size: 1.3rem; line-height: 1.8; font-weight: 400; }
+        .phrase-text .word {
+            cursor: pointer;
+            border-radius: 4px;
+            padding: 0 2px;
+            transition: background 0.15s, color 0.15s;
+        }
+        .phrase-text .word:hover {
+            background: rgba(108, 92, 231, 0.25);
+            color: #a29bfe;
+        }
+        .phrase-text .word.speaking {
+            background: rgba(108, 92, 231, 0.5);
+            color: #fff;
+        }
+        .word-hint {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            text-align: center;
+            margin-top: 0.3rem;
+            opacity: 0.6;
+        }
         .record-controls {
             display: flex;
             flex-direction: column;
@@ -361,6 +382,7 @@
             </div>
             <div class="phrase-label">Read this phrase aloud:</div>
             <div class="phrase-text" id="phrase-text">Loading...</div>
+            <div class="word-hint">👆 Tap any word to hear its pronunciation</div>
         </div>
 
         <canvas id="visualizer"></canvas>
@@ -637,7 +659,7 @@ function showPhrase() {
         return;
     }
     const phrase = sessionPhrases[currentIndex];
-    document.getElementById("phrase-text").textContent = phrase;
+    renderPhraseWithWords(phrase);
     document.getElementById("progress-label").textContent =
         `Phrase ${currentIndex + 1} of ${sessionPhrases.length}`;
     const pct = Math.round(((currentIndex) / sessionPhrases.length) * 100);
@@ -725,6 +747,41 @@ function getSupportedMimeType() {
     return "";
 }
 
+// ── Word pronunciation (Web Speech API) ────────────────────────────────────
+let _speakingSpan = null;
+
+function speakWord(word, spanEl) {
+    if (!window.speechSynthesis) return;
+    // Cancel any in-progress utterance
+    window.speechSynthesis.cancel();
+    if (_speakingSpan) { _speakingSpan.classList.remove("speaking"); _speakingSpan = null; }
+
+    const clean = word.replace(/[^a-zA-Z''\-]/g, "").trim();
+    if (!clean) return;
+
+    const utter = new SpeechSynthesisUtterance(clean);
+    utter.rate  = 0.85;   // slightly slower for clarity
+    utter.pitch = 1.0;
+    utter.lang  = "en-US";
+
+    spanEl.classList.add("speaking");
+    _speakingSpan = spanEl;
+    utter.onend = () => { spanEl.classList.remove("speaking"); _speakingSpan = null; };
+    utter.onerror = () => { spanEl.classList.remove("speaking"); _speakingSpan = null; };
+
+    window.speechSynthesis.speak(utter);
+}
+
+function renderPhraseWithWords(phrase) {
+    const el = document.getElementById("phrase-text");
+    // Split keeping punctuation attached to words so the phrase looks normal
+    el.innerHTML = phrase.split(/(\s+)/).map(token => {
+        if (/^\s+$/.test(token)) return token; // whitespace as-is
+        const escaped = token.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+        return `<span class="word" onclick="speakWord('${token.replace(/'/g,"\\'").replace(/"/g,"&quot;")}',this)">${escaped}</span>`;
+    }).join("");
+}
+
 function playback() {
     if (!audioUrl) {
         console.warn("No audioUrl available for playback");
@@ -760,7 +817,7 @@ function redoPhrase() {
     document.getElementById("record-status").textContent = "Tap to start recording";
     // Re-render the SAME phrase (currentIndex is unchanged — that's the whole point)
     const phrase = sessionPhrases[currentIndex];
-    document.getElementById("phrase-text").textContent = phrase;
+    renderPhraseWithWords(phrase);
     // Keep emotion banner accurate for this phrase
     const cue = getEmotionCue(phrase);
     const banner = document.getElementById("emotion-banner");
