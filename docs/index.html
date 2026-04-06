@@ -1022,7 +1022,7 @@ function endSession() {
     const uploaded = recordings.filter(r => r.uploaded).length;
     const local = recordings.length - uploaded;
     let msg = `Session complete! ${recordings.length} phrases recorded.`;
-    if (uploaded > 0) msg += ` ${uploaded} uploaded to Google Drive.`;
+    if (uploaded > 0) msg += ` ${uploaded} uploaded to Monica's database for processing.`;
     if (local > 0) msg += ` ${local} saved locally — click "Download All" to save.`;
 
     document.getElementById("record-screen").innerHTML = `
