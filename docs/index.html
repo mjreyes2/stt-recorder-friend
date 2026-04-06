@@ -278,6 +278,20 @@
             <label for="recorder-name">So we know whose recordings these are</label>
             <input type="text" id="recorder-name" placeholder="e.g., John" autocomplete="name">
         </div>
+        <div class="setup-card">
+            <h2>🎤 Microphone</h2>
+            <label for="mic-select">Select your microphone</label>
+            <select id="mic-select" style="width:100%; padding:0.6rem; border-radius:8px; border:1px solid var(--border); background:var(--surface); color:var(--text); font-size:1rem; margin-top:0.4rem;">
+                <option value="">Loading microphones...</option>
+            </select>
+            <div id="mic-test-area" style="margin-top:0.8rem; display:none;">
+                <div style="font-size:0.85rem; color:var(--text-muted); margin-bottom:0.3rem;">Input level — speak to test:</div>
+                <div style="background:var(--bg); border-radius:8px; height:18px; overflow:hidden; border:1px solid var(--border);">
+                    <div id="level-bar" style="height:100%; width:0%; background:linear-gradient(90deg,#00b894,#fdcb6e,#e17055); border-radius:8px; transition:width 0.05s;"></div>
+                </div>
+                <div id="mic-status" style="font-size:0.8rem; margin-top:0.3rem; color:var(--text-muted);">🔇 No signal detected</div>
+            </div>
+        </div>
         <div class="config-warning" id="config-warning">
             ⚠️ The recording server is not configured yet. Recordings will be saved locally in your browser
             and you can download them as a zip file when done.
@@ -305,6 +319,9 @@
         </div>
 
         <canvas id="visualizer"></canvas>
+        <div style="background:var(--bg); border-radius:6px; height:10px; overflow:hidden; margin-top:4px; border:1px solid var(--border);">
+            <div id="rec-level-bar" style="height:100%; width:0%; background:linear-gradient(90deg,#00b894,#fdcb6e,#e17055); border-radius:6px; transition:width 0.05s;"></div>
+        </div>
 
         <div class="record-controls">
             <button class="record-btn" id="record-btn" onclick="toggleRecord()">
@@ -363,6 +380,81 @@ let analyser = null;
 let animFrameId = null;
 let completedCount = 0;
 let stream = null;
+let selectedDeviceId = "";
+let levelAnimId = null;
+
+// Enumerate microphones and populate selector
+async function loadMicOptions() {
+    try {
+        // Need to request mic briefly to get device labels
+        const tmpStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        tmpStream.getTracks().forEach(t => t.stop());
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const mics = devices.filter(d => d.kind === "audioinput");
+        const sel = document.getElementById("mic-select");
+        sel.innerHTML = "";
+        mics.forEach((mic, i) => {
+            const opt = document.createElement("option");
+            opt.value = mic.deviceId;
+            opt.textContent = mic.label || `Microphone ${i + 1}`;
+            sel.appendChild(opt);
+        });
+        selectedDeviceId = sel.value;
+        startMicTest(selectedDeviceId);
+        sel.onchange = () => {
+            selectedDeviceId = sel.value;
+            startMicTest(selectedDeviceId);
+        };
+    } catch(e) {
+        console.error("Could not enumerate mics:", e);
+    }
+}
+
+// Live mic test — shows level bar on setup screen
+let micTestStream = null;
+let micTestContext = null;
+async function startMicTest(deviceId) {
+    // Stop previous test
+    if (micTestStream) micTestStream.getTracks().forEach(t => t.stop());
+    if (micTestContext) micTestContext.close();
+    if (levelAnimId) cancelAnimationFrame(levelAnimId);
+
+    document.getElementById("mic-test-area").style.display = "block";
+    try {
+        const constraints = { audio: deviceId ? { deviceId: { exact: deviceId } } : true };
+        micTestStream = await navigator.mediaDevices.getUserMedia(constraints);
+        micTestContext = new (window.AudioContext || window.webkitAudioContext)();
+        const src = micTestContext.createMediaStreamSource(micTestStream);
+        const testAnalyser = micTestContext.createAnalyser();
+        testAnalyser.fftSize = 256;
+        src.connect(testAnalyser);
+        const data = new Uint8Array(testAnalyser.frequencyBinCount);
+        const levelBar = document.getElementById("level-bar");
+        const micStatus = document.getElementById("mic-status");
+        let silentFrames = 0;
+        function tick() {
+            levelAnimId = requestAnimationFrame(tick);
+            testAnalyser.getByteFrequencyData(data);
+            const avg = data.reduce((a, b) => a + b, 0) / data.length;
+            const pct = Math.min(100, avg * 2.5);
+            levelBar.style.width = pct + "%";
+            if (pct > 5) {
+                silentFrames = 0;
+                micStatus.textContent = "✅ Microphone is working!";
+                micStatus.style.color = "#00b894";
+            } else {
+                silentFrames++;
+                if (silentFrames > 60) {
+                    micStatus.textContent = "🔇 No signal — try speaking or pick a different mic";
+                    micStatus.style.color = "var(--text-muted)";
+                }
+            }
+        }
+        tick();
+    } catch(e) {
+        document.getElementById("mic-status").textContent = "❌ Could not access mic: " + e.message;
+    }
+}
 
 // Load phrases from embedded data or remote
 async function loadPhrases() {
@@ -396,23 +488,33 @@ async function startRecording() {
         return;
     }
 
-    // Request mic access
+    // Stop mic test stream before starting session
+    if (micTestStream) { micTestStream.getTracks().forEach(t => t.stop()); micTestStream = null; }
+    if (micTestContext) { micTestContext.close(); micTestContext = null; }
+    if (levelAnimId) { cancelAnimationFrame(levelAnimId); levelAnimId = null; }
+
+    // Request mic access using selected device
     try {
-        stream = await navigator.mediaDevices.getUserMedia({
-            audio: { echoCancellation: true, noiseSuppression: true, sampleRate: 16000 }
-        });
+        const audioConstraints = {
+            echoCancellation: true,
+            noiseSuppression: true,
+            sampleRate: 16000
+        };
+        if (selectedDeviceId) audioConstraints.deviceId = { exact: selectedDeviceId };
+        stream = await navigator.mediaDevices.getUserMedia({ audio: audioConstraints });
     } catch (e) {
         showToast("Microphone access denied. Please allow mic access and try again.");
         return;
     }
 
-    // Setup audio visualizer
+    // Setup audio visualizer + recording level bar
     audioContext = new (window.AudioContext || window.webkitAudioContext)();
     analyser = audioContext.createAnalyser();
     const source = audioContext.createMediaStreamSource(stream);
     source.connect(analyser);
     analyser.fftSize = 256;
     drawVisualizer();
+    drawRecordingLevel();
 
     // Load and shuffle phrases, pick a session batch
     await loadPhrases();
@@ -691,6 +793,19 @@ function drawVisualizer() {
     draw();
 }
 
+// Recording screen level meter
+function drawRecordingLevel() {
+    const levelBar = document.getElementById("rec-level-bar");
+    const data = new Uint8Array(analyser.frequencyBinCount);
+    function tick() {
+        requestAnimationFrame(tick);
+        analyser.getByteFrequencyData(data);
+        const avg = data.reduce((a, b) => a + b, 0) / data.length;
+        levelBar.style.width = Math.min(100, avg * 2.5) + "%";
+    }
+    tick();
+}
+
 function showToast(msg) {
     const el = document.getElementById("toast");
     el.textContent = msg;
@@ -709,6 +824,8 @@ window.addEventListener("DOMContentLoaded", () => {
     document.getElementById("recorder-name").addEventListener("change", (e) => {
         localStorage.setItem("stt_recorder_name", e.target.value);
     });
+    // Load mic options
+    loadMicOptions();
 });
 </script>
 </body>
